@@ -1,0 +1,10 @@
+{
+  "id": "msig.agents",
+  "name": "Hosted seats",
+  "apiVersion": 1,
+  "description": "Agents your own provider hosts: it holds each agent's key and runs it.",
+  "discovery": {
+    "category": "agents",
+    "tags": ["agents", "hosted"]
+  }
+}
