@@ -52,26 +52,69 @@ export function apply(ctx) {
     return state;
   }
 
-  /** The New agent dialog: which of the provider's seats this agent is. */
+  /** The New agent dialog: which of the provider's seats this agent is. The seats are a choice
+   * list in the host's own form classes (Buzz's Radio markup), so they take the dialog's colors;
+   * a native select draws its popup in the system's colors instead. */
   function Create({ config, onChange, disabled }) {
+    const label = React.useId();
     const { data, error, loading } = useProvider("/seats");
     if (loading) return h("p", null, "Asking the seat provider…");
     if (error) return h("p", { role: "alert" }, error);
     const open = data.seats.filter((seat) => !seat.active);
     if (open.length === 0) return h("p", null, "Every seat this provider hosts is already set up.");
+    const chosen = open.findIndex((seat) => seat.id === config.seat);
+    const choose = (index, focus) => {
+      onChange({ ...config, seat: open[index].id });
+      if (focus) document.getElementById(`${label}-${index}`)?.focus();
+    };
+    // A radio group: one tab stop, arrows move and choose (as Buzz's Radio does).
+    const step = { ArrowDown: 1, ArrowRight: 1, ArrowUp: -1, ArrowLeft: -1 };
     return h(
-      "label",
-      { style: { display: "grid", gap: 4 } },
-      "Seat",
+      "div",
+      { className: "buzz-field" },
+      h("span", { id: label, className: "buzz-field-label" }, "Seat"),
       h(
-        "select",
-        {
-          value: config.seat,
-          disabled,
-          onChange: (event) => onChange({ ...config, seat: event.target.value }),
-        },
-        h("option", { value: "" }, "Choose a seat"),
-        ...open.map((seat) => h("option", { key: seat.id, value: seat.id }, `${seat.name} (${seat.id})`)),
+        "div",
+        { role: "radiogroup", "aria-labelledby": label, className: "buzz-radio-group", "data-size": "md" },
+        ...open.map((seat, index) => {
+          const checked = index === chosen;
+          const id = `${label}-${index}`;
+          return h(
+            "label",
+            { key: seat.id, htmlFor: id, className: "buzz-choice", "data-variant": "card", "data-size": "md" },
+            h(
+              "button",
+              {
+                id,
+                type: "button",
+                role: "radio",
+                "aria-checked": checked,
+                "aria-labelledby": `${id}-label`,
+                "aria-describedby": `${id}-description`,
+                className: "buzz-radio",
+                "data-variant": "card",
+                "data-size": "md",
+                "data-checked": checked ? "" : undefined,
+                "data-disabled": disabled ? "" : undefined,
+                disabled,
+                tabIndex: checked || (chosen < 0 && index === 0) ? 0 : -1,
+                onClick: () => choose(index, false),
+                onKeyDown: (event) => {
+                  if (!step[event.key]) return;
+                  event.preventDefault();
+                  choose((index + step[event.key] + open.length) % open.length, true);
+                },
+              },
+              checked ? h("span", { className: "buzz-radio-indicator" }) : null,
+            ),
+            h(
+              "span",
+              null,
+              h("span", { id: `${id}-label`, className: "buzz-choice-label" }, seat.name),
+              h("span", { id: `${id}-description`, className: "buzz-choice-description" }, seat.id),
+            ),
+          );
+        }),
       ),
     );
   }
