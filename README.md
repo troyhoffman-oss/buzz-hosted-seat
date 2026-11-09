@@ -13,7 +13,10 @@ never holds the agent's key, and the plugin never sees it.
   profile and starts it.
 - **Rename and picture** go to the provider (`profile`).
 - **Delete** is refused. A seat is retired on its provider.
-- The **Status** tab shows what the provider reports for the agent.
+- The **Setup** tab shows, read only, what the provider reports for the agent: whether it is up (its
+  last heartbeat) and how it is set up (job title, role, owner and people, model, engine, doors,
+  tools). Buzz only displays it: a seat's setup changes in a chat with it or in the provider's
+  config.
 
 ## Provider API
 
@@ -25,7 +28,11 @@ All calls are JSON over HTTPS to the provider's origin.
 | `POST /agents` | `{ seat, name, picture?, community }` | `{ pubkey, picture? }` |
 | `POST /agents/<pubkey>/activate` | `{ name, community, auth }` | `{}` |
 | `POST /agents/<pubkey>/profile` | `{ community, name, picture? }` | `{}` |
-| `GET /agents/<pubkey>` | | `{ seat, active }` |
+| `GET /agents/<pubkey>` | | `{ seat, active, setup, heartbeat }` |
+
+`setup` holds what the provider knows of the seat, each field optional: `title`, `role`, `owner`,
+`people` (names), `model`, `engine`, `doors` and `tools` (names). `heartbeat` is the time (ISO 8601) the
+agent last answered, or null; it counts as up while one came in the last three minutes.
 
 Every call must be safe to repeat: the app asks again after a failure. An error answer is
 `{ error }` with a non-2xx status.

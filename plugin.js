@@ -119,17 +119,85 @@ export function apply(ctx) {
     );
   }
 
-  /** What the provider reports for this agent. */
-  function Status({ agent }) {
+  /** A row as Buzz's own settings draw one: its name, and what it is under it. */
+  const row = (title, value) =>
+    value === undefined || value === null || value === "" || (Array.isArray(value) && value.length === 0)
+      ? null
+      : h(
+          "div",
+          { key: title, "data-buzz-ui": "", className: "buzz-preference-row" },
+          h(
+            "div",
+            { className: "buzz-preference-row-content" },
+            h("div", { className: "buzz-preference-row-label" }, title),
+            h(
+              "span",
+              { className: "buzz-preference-row-description" },
+              Array.isArray(value) ? value.join(", ") : value,
+            ),
+          ),
+        );
+
+  /** Up while its heartbeats keep coming (one a minute); the last one's age either way. */
+  function liveness(active, heartbeat) {
+    if (!active) return { up: false, text: "Setup not finished" };
+    if (!heartbeat) return { up: false, text: "No heartbeat yet" };
+    const seconds = Math.max(0, (Date.now() - Date.parse(heartbeat)) / 1000);
+    const units = [[86400, "day"], [3600, "hour"], [60, "minute"], [1, "second"]];
+    const [size, unit] = units.find(([size]) => seconds >= size) ?? [1, "second"];
+    const ago = new Intl.RelativeTimeFormat(undefined, { numeric: "auto" }).format(-Math.round(seconds / size), unit);
+    const up = seconds < 180;
+    return { up, text: `${up ? "Up" : "Down"}, last heartbeat ${ago}` };
+  }
+
+  /** What the provider reports for this agent: how it is set up, and whether it is up. Read only. */
+  function Setup({ agent }) {
     const { data, error, loading } = useProvider(`/agents/${encodeURIComponent(agent.pubkey)}`);
-    if (loading) return h("p", null, "Asking the seat provider…");
-    if (error) return h("p", { role: "alert" }, error);
+    if (loading) return h("p", { className: "text-body-sm text-secondary" }, "Asking the seat provider…");
+    if (error) return h("p", { role: "alert", className: "text-body-sm text-danger" }, error);
+    const setup = data.setup ?? {};
+    const live = liveness(data.active, data.heartbeat);
+    const dot = h("span", {
+      "aria-hidden": "true",
+      style: {
+        display: "inline-block",
+        width: "var(--space-2)",
+        height: "var(--space-2)",
+        marginInlineEnd: "var(--space-2)",
+        borderRadius: "50%",
+        background: live.up ? "var(--status-online)" : "var(--status-offline)",
+      },
+    });
     return h(
-      "p",
-      null,
-      data.active
-        ? `Seat ${data.seat}, running on its provider.`
-        : `Seat ${data.seat}: made, setup not finished.`,
+      "div",
+      { className: "min-w-0" },
+      h(
+        "div",
+        { "data-buzz-ui": "", className: "buzz-content-header", "data-inline": "" },
+        h(
+          "div",
+          { className: "buzz-content-header-copy" },
+          h("h4", { className: "buzz-content-header-title" }, "Setup"),
+          h(
+            "p",
+            { className: "buzz-content-header-subtitle" },
+            `Seat ${data.seat}, as its provider runs it. It changes in a chat with the agent or in the provider's config, not here.`,
+          ),
+        ),
+      ),
+      h(
+        "div",
+        { "data-buzz-ui": "", className: "buzz-settings-group", "data-layout": "rows" },
+        row("Status", h("span", null, dot, live.text)),
+        row("Job title", setup.title),
+        row("Role", setup.role),
+        row("Owner", setup.owner),
+        row("People", setup.people),
+        row("Model", setup.model),
+        row("Engine", setup.engine),
+        row("Doors", setup.doors),
+        row("Tools", setup.tools),
+      ),
     );
   }
 
@@ -140,7 +208,7 @@ export function apply(ctx) {
     defaults: () => ({ config: { seat: "" } }),
     summary: () => "Hosted by its provider",
     Create,
-    tabs: [{ id: "status", title: "Status", component: Status }],
+    tabs: [{ id: "setup", title: "Setup", component: Setup }],
     remote: {
       provision: ({ name, picture, community, config, signal }) => {
         if (!config?.seat) throw new Error("Choose a seat first.");
