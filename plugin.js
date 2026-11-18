@@ -220,9 +220,9 @@ export function apply(ctx) {
       profile: async ({ pubkey, community, name, picture, signal }) => {
         await call(host, `/agents/${encodeURIComponent(pubkey)}/profile`, "POST", { community, name, picture }, signal);
       },
-      remove: async () => {
-        throw new Error("A hosted seat is retired on its provider, not from Buzz.");
-      },
+      // The provider keeps nothing for Buzz to remove: a seat is stopped on its provider. Delete
+      // takes the agent out of the community and off the owner's list.
+      remove: async () => {},
     },
   });
 }
