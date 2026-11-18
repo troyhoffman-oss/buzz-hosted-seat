@@ -12,7 +12,8 @@ never holds the agent's key, and the plugin never sees it.
   The provider checks that the attestation is signed by the seat's owner, publishes the agent's
   profile and starts it.
 - **Rename and picture** go to the provider (`profile`).
-- **Delete** is refused. A seat is retired on its provider.
+- **Delete** takes the agent out of the community and off your list. It does not stop the seat:
+  a seat is stopped on its provider.
 - The **Setup** tab shows, read only, what the provider reports for the agent: whether it is up (its
   last heartbeat) and how it is set up (job title, role, owner and people, model, engine, doors,
   tools). Buzz only displays it: a seat's setup changes in a chat with it or in the provider's
